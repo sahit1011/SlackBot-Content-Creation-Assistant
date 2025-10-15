@@ -16,11 +16,11 @@
 Create functions to parse keywords from CSV files and text input.
 
 **Acceptance Criteria:**
-- [ ] Parses CSV files correctly
-- [ ] Handles text input (comma and newline separated)
-- [ ] Returns list of raw keywords
-- [ ] Handles encoding issues (UTF-8, Latin-1)
-- [ ] Error handling for corrupt files
+- [x] Parses CSV files correctly
+- [x] Handles text input (comma and newline separated)
+- [x] Returns list of raw keywords
+- [x] Handles encoding issues (UTF-8, Latin-1)
+- [x] Error handling for corrupt files
 
 **Deliverables:**
 - `app/services/keyword_parser.py`
@@ -159,12 +159,12 @@ def test_parser():
 Clean, normalize, and deduplicate keywords.
 
 **Acceptance Criteria:**
-- [ ] Converts to lowercase
-- [ ] Removes special characters (except hyphens)
-- [ ] Trims whitespace
-- [ ] Removes duplicates (case-insensitive)
-- [ ] Filters empty strings
-- [ ] Returns cleaned list with statistics
+- [x] Converts to lowercase
+- [x] Removes special characters (except hyphens)
+- [x] Trims whitespace
+- [x] Removes duplicates (case-insensitive)
+- [x] Filters empty strings
+- [x] Returns cleaned list with statistics
 
 **Deliverables:**
 - `app/services/keyword_cleaner.py`
@@ -280,11 +280,11 @@ def test_cleaner():
 Generate vector embeddings for keywords using sentence-transformers.
 
 **Acceptance Criteria:**
-- [ ] Uses free sentence-transformers model
-- [ ] Handles batch processing
-- [ ] Returns numpy array of embeddings
-- [ ] Caches results in Redis
-- [ ] Error handling for model loading
+- [x] Uses free sentence-transformers model
+- [x] Handles batch processing
+- [x] Returns numpy array of embeddings
+- [x] Caches results in Redis
+- [x] Error handling for model loading
 
 **Deliverables:**
 - `app/services/embedding_generator.py`
@@ -417,11 +417,11 @@ def test_embeddings():
 Cluster keywords into semantic groups using embeddings.
 
 **Acceptance Criteria:**
-- [ ] Determines optimal number of clusters (3-10)
-- [ ] Uses KMeans clustering
-- [ ] Generates descriptive cluster names
-- [ ] Returns clusters with keywords
-- [ ] Handles edge cases (too few keywords, outliers)
+- [x] Determines optimal number of clusters (3-10)
+- [x] Uses KMeans clustering
+- [x] Generates descriptive cluster names
+- [x] Returns clusters with keywords
+- [x] Handles edge cases (too few keywords, outliers)
 
 **Deliverables:**
 - `app/services/keyword_clusterer.py`

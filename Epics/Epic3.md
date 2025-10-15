@@ -16,11 +16,11 @@
 Integrate web search API to find top-ranking content for keywords.
 
 **Acceptance Criteria:**
-- [ ] Uses Brave Search API
-- [ ] Returns top 5-10 results per query
-- [ ] Handles rate limiting
-- [ ] Implements retry logic
-- [ ] Returns clean result structure
+- [x] Uses SerpAPI (free tier)
+- [x] Returns top 5-10 results per query
+- [x] Handles rate limiting
+- [x] Implements retry logic
+- [x] Returns clean result structure
 
 **Deliverables:**
 - `app/services/web_search.py`
@@ -37,10 +37,10 @@ from app.config import Config
 
 class WebSearchService:
     """Search the web for top-ranking content"""
-    
+
     def __init__(self):
-        self.api_key = Config.BRAVE_API_KEY
-        self.base_url = "https://api.search.brave.com/res/v1/web/search"
+        self.api_key = Config.SERP_API_KEY
+        self.base_url = "https://serpapi.com/search.json"
         self.rate_limit_delay = 1  # seconds between requests
         self.last_request_time = 0
     
@@ -82,14 +82,14 @@ class WebSearchService:
         self._wait_for_rate_limit()
         
         params = {
+            'api_key': self.api_key,
             'q': query,
-            'count': count,
-            'search_lang': 'en'
+            'num': count,
+            'engine': 'google'
         }
-        
+
         headers = {
-            'Accept': 'application/json',
-            'X-Subscription-Token': self.api_key
+            'Accept': 'application/json'
         }
         
         # Retry logic
@@ -127,17 +127,17 @@ class WebSearchService:
     def _parse_results(self, data: Dict) -> List[Dict]:
         """Parse search API response"""
         results = []
-        
-        web_results = data.get('web', {}).get('results', [])
-        
-        for result in web_results:
+
+        organic_results = data.get('organic_results', [])
+
+        for result in organic_results:
             results.append({
                 'title': result.get('title', ''),
-                'url': result.get('url', ''),
-                'description': result.get('description', ''),
+                'url': result.get('link', ''),
+                'description': result.get('snippet', ''),
                 'position': len(results) + 1
             })
-        
+
         return results
     
     def _wait_for_rate_limit(self):
@@ -175,11 +175,11 @@ def test_web_search():
 Scrape web pages to extract headings and structure.
 
 **Acceptance Criteria:**
-- [ ] Extracts H1, H2, H3 tags
-- [ ] Handles failed requests gracefully
-- [ ] Respects timeout limits
-- [ ] Returns structured heading data
-- [ ] Cleans extracted text
+- [x] Extracts H1, H2, H3 tags
+- [x] Handles failed requests gracefully
+- [x] Respects timeout limits
+- [x] Returns structured heading data
+- [x] Cleans extracted text
 
 **Deliverables:**
 - `app/services/content_scraper.py`
@@ -365,11 +365,11 @@ def test_scraper():
 Generate structured content outlines based on scraped content.
 
 **Acceptance Criteria:**
-- [ ] Creates intro, body sections, conclusion
-- [ ] Based on common topics from top content
-- [ ] Well-structured with subsections
-- [ ] Uses LLM for intelligent structuring
-- [ ] Fallback to rule-based if LLM fails
+- [x] Creates intro, body sections, conclusion
+- [x] Based on common topics from top content
+- [x] Well-structured with subsections
+- [x] Uses LLM for intelligent structuring
+- [x] Fallback to rule-based if LLM fails
 
 **Deliverables:**
 - `app/services/outline_generator.py`
@@ -601,11 +601,11 @@ def test_outline_generator():
 Generate creative post ideas using LLM.
 
 **Acceptance Criteria:**
-- [ ] One unique post idea per cluster
-- [ ] Includes title, angle, target audience
-- [ ] Creative and actionable
-- [ ] Considers keyword intent
-- [ ] Fallback to rule-based generation
+- [x] One unique post idea per cluster
+- [x] Includes title, angle, target audience
+- [x] Creative and actionable
+- [x] Considers keyword intent
+- [x] Completely LLM-based with proper logging
 
 **Deliverables:**
 - `app/services/idea_generator.py`
