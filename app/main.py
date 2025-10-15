@@ -38,7 +38,7 @@ def main():
 
     # Test database connection
     try:
-        from app.services.database import DatabaseService
+        from app.services.data.database import DatabaseService
         db = DatabaseService()
         update_health_status('database', 'healthy')
         logger.info("Database connection successful")
@@ -48,7 +48,7 @@ def main():
 
     # Test Redis connection
     try:
-        from app.services.cache import CacheService
+        from app.services.data.cache import CacheService
         cache = CacheService()
         if cache.client:
             update_health_status('redis', 'healthy')

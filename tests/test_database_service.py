@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Test script for DatabaseService"""
 
-from app.services.database import DatabaseService
+from app.services.data.database import DatabaseService
 import uuid
 
 def test_database_service():

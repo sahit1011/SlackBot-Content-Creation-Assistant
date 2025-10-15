@@ -1,6 +1,7 @@
 # app/services/web_search.py
 import requests
 import time
+import logging
 from typing import List, Dict
 from app.config import Config
 
@@ -12,6 +13,12 @@ class WebSearchService:
         self.base_url = "https://serpapi.com/search.json"
         self.rate_limit_delay = 1  # seconds between requests
         self.last_request_time = 0
+        self.logger = logging.getLogger(__name__)
+
+        if not self.api_key or self.api_key == 'your_serpapi_api_key_here':
+            self.logger.warning(" SerpAPI key not configured - will use mock data for testing")
+        else:
+            self.logger.info(" SerpAPI configured for web search")
 
     def search_keywords(self, keywords: List[str], count: int = 5) -> Dict[str, List[Dict]]:
         """
@@ -47,10 +54,12 @@ class WebSearchService:
         Returns:
             List of search results
         """
-        # # For testing without valid API key, return mock data
-        # if not self.api_key or self.api_key == 'your_serpapi_api_key_here':
-        #     print("Using mock data for testing (API key not configured)")
-        #     return self._get_mock_results(query, count)
+        self.logger.info(f" Searching for: '{query}' (requesting {count} results)")
+
+        # For testing without valid API key, return mock data
+        if not self.api_key or self.api_key == 'your_serpapi_api_key_here':
+            self.logger.info(" Using mock data for testing (API key not configured)")
+            return self._get_mock_results(query, count)
 
         # Rate limiting
         self._wait_for_rate_limit()
@@ -70,6 +79,7 @@ class WebSearchService:
         max_retries = 3
         for attempt in range(max_retries):
             try:
+                self.logger.debug(f" Making API request to SerpAPI (attempt {attempt + 1})")
                 response = requests.get(
                     self.base_url,
                     params=params,
@@ -79,19 +89,22 @@ class WebSearchService:
 
                 if response.status_code == 200:
                     data = response.json()
-                    return self._parse_results(data)
+                    results = self._parse_results(data)
+                    self.logger.info(f" Found {len(results)} search results")
+                    return results
                 elif response.status_code == 429:
                     # Rate limited
                     wait_time = 2 ** attempt
+                    self.logger.warning(f" Rate limited, waiting {wait_time}s before retry")
                     time.sleep(wait_time)
                     continue
                 else:
-                    print(f"Search API error: {response.status_code}")
-                    print(f"Response: {response.text[:200]}")
+                    self.logger.error(f" Search API error: {response.status_code}")
+                    self.logger.debug(f"Response: {response.text[:200]}")
                     return []
 
             except requests.exceptions.RequestException as e:
-                print(f"Request failed: {str(e)}")
+                self.logger.error(f" Request failed: {str(e)}")
                 if attempt < max_retries - 1:
                     time.sleep(2 ** attempt)
                     continue

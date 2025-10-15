@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Test script for ContentScraper"""
 
-from app.services.content_scraper import ContentScraper
+from app.services.processing.content_scraper import ContentScraper
 import json
 
 def test_content_scraper():

@@ -2,12 +2,14 @@
 from typing import List, Dict
 from groq import Groq
 from app.config import Config
+import logging
 
 class OutlineGenerator:
     """Generate content outlines based on research"""
 
     def __init__(self):
         self.groq_client = Groq(api_key=Config.GROQ_API_KEY)
+        self.logger = logging.getLogger(__name__)
 
     def generate_outline(
         self,
@@ -25,15 +27,23 @@ class OutlineGenerator:
             Structured outline dictionary
         """
         keywords = cluster['keywords']
+        cluster_name = cluster['cluster_name']
+
+        self.logger.info(f" Generating outline for cluster '{cluster_name}'")
 
         # Extract common topics
+        self.logger.debug(" Extracting common topics from scraped content")
         common_topics = self._extract_topics(scraped_data)
+        self.logger.debug(f" Found {len(common_topics)} common topics: {common_topics[:3]}{'...' if len(common_topics) > 3 else ''}")
 
         # Only use LLM-based generation - no fallbacks
         try:
+            self.logger.info(" Calling Groq API for outline generation")
             outline = self._generate_with_llm(keywords, common_topics)
+            self.logger.info(f" Outline generated: '{outline.get('title', 'N/A')}' with {len(outline.get('sections', []))} sections")
         except Exception as e:
             error_msg = f"LLM Outline Generation Failed: {str(e)}"
+            self.logger.error(error_msg)
             print(error_msg)
             raise Exception(error_msg)  # Re-raise to stop pipeline
 

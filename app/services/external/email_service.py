@@ -40,7 +40,7 @@ class EmailService:
             # Create attachment
             attachment = Attachment(
                 FileContent(encoded_pdf),
-                FileName(os.path.basename(pdf_path)),
+                FileName(f"Content_Strategy_Report_{batch_id[:8]}.pdf"),
                 FileType('application/pdf'),
                 Disposition('attachment')
             )
@@ -49,13 +49,31 @@ class EmailService:
             message = Mail(
                 from_email=self.from_email,
                 to_emails=to_email,
-                subject='Your Content Strategy Report is Ready',
+                subject='Your Content Strategy Report is Ready 📄',
                 html_content=self._generate_email_html(
                     batch_id,
                     keyword_count,
                     cluster_count
                 )
             )
+
+            # Add headers to improve deliverability
+            message.reply_to = self.from_email
+
+            # Add custom headers for better spam filtering
+            from sendgrid.helpers.mail import Header
+
+            # Add List-Unsubscribe header (helps with deliverability)
+            unsubscribe_header = Header('List-Unsubscribe', f'<mailto:{self.from_email}?subject=unsubscribe>')
+            message.add_header(unsubscribe_header)
+
+            # Add X-Mailer header
+            mailer_header = Header('X-Mailer', 'Content Strategy Assistant v1.0')
+            message.add_header(mailer_header)
+
+            # Add Precedence header
+            precedence_header = Header('Precedence', 'bulk')
+            message.add_header(precedence_header)
 
             message.attachment = attachment
 

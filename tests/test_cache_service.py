@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Test script for CacheService"""
 
-from app.services.cache import CacheService
+from app.services.data.cache import CacheService
 import time
 
 def test_cache_service():

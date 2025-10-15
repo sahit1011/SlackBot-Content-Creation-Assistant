@@ -23,28 +23,41 @@ A sophisticated Slack bot that helps content creators process keywords, generate
 │   ├── config.py            # Configuration management
 │   ├── health.py            # Health check endpoints
 │   ├── handlers/            # Slack event/command handlers
-│   ├── services/            # Core business logic
-│   │   ├── pipeline.py      # Main processing pipeline
-│   │   ├── keyword_cleaner.py
-│   │   ├── keyword_parser.py
-│   │   ├── keyword_clusterer.py
-│   │   ├── embedding_generator.py
-│   │   ├── content_scraper.py
-│   │   ├── web_search.py
-│   │   ├── idea_generator.py
-│   │   ├── outline_generator.py
-│   │   ├── report_generator.py
-│   │   ├── database.py
-│   │   ├── cache.py
-│   │   └── email_service.py
+│   ├── models/              # Data models
+│   │   ├── batch.py         # Batch processing model
+│   │   ├── user.py          # User model
+│   │   └── cluster.py       # Keyword cluster model
+│   ├── services/            # Core business logic (modularized)
+│   │   ├── ai/              # AI-powered services
+│   │   │   ├── embedding_generator.py
+│   │   │   ├── idea_generator.py
+│   │   │   └── outline_generator.py
+│   │   ├── data/            # Data persistence services
+│   │   │   ├── database.py
+│   │   │   └── cache.py
+│   │   ├── external/        # External API integrations
+│   │   │   ├── web_search.py
+│   │   │   └── email_service.py
+│   │   └── processing/      # Core processing logic
+│   │       ├── pipeline.py      # Main processing pipeline
+│   │       ├── keyword_cleaner.py
+│   │       ├── keyword_parser.py
+│   │       ├── keyword_clusterer.py
+│   │       ├── content_scraper.py
+│   │       └── report_generator.py
 │   └── utils/
 │       └── slack_formatters.py
-├── migrations/              # Database migrations
-├── Epics/                   # Project documentation
-├── Dockerfile               # Container configuration
+├── tests/                  # Test suite (moved from root)
+├── migrations/             # Database migrations
+├── docs/                   # Documentation
+│   ├── Epics/              # Project epics and features
+│   ├── assignment.md       # Assignment documentation
+│   ├── DEPLOYMENT.md       # Deployment guide
+│   ├── prd_doc.md          # Product requirements
+│   └── task_manager.md     # Task management
+├── Dockerfile              # Container configuration
 ├── .dockerignore           # Docker ignore rules
 ├── requirements.txt        # Python dependencies
-├── DEPLOYMENT.md           # Deployment guide
 └── .env.example           # Environment variables template
 ```
 
@@ -191,6 +204,8 @@ Run the test suite:
 ```bash
 python -m pytest tests/
 ```
+
+Note: Tests have been moved to the `tests/` directory for better organization.
 
 ### Test Coverage
 

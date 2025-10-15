@@ -1,5 +1,6 @@
 from sentence_transformers import SentenceTransformer
 import numpy as np
+import logging
 from typing import List
 import hashlib
 import json
@@ -12,44 +13,55 @@ class EmbeddingGenerator:
     def __init__(self):
         self.model = None
         self.redis_client = None
-        
+        self.logger = logging.getLogger(__name__)
+
         try:
             if Config.REDIS_URL:
                 self.redis_client = redis.from_url(Config.REDIS_URL)
-        except:
-            pass
+                self.logger.info("✓ Redis cache connected for embeddings")
+            else:
+                self.logger.info(" Redis not configured, embeddings will not be cached")
+        except Exception as e:
+            self.logger.warning(f" Redis connection failed: {e}")
     
     def load_model(self):
         """Load sentence transformer model"""
         if self.model is None:
+            self.logger.info(" Loading SentenceTransformer model (all-MiniLM-L6-v2)")
             # Use lightweight model
             self.model = SentenceTransformer('all-MiniLM-L6-v2')
+            self.logger.info(" Model loaded successfully")
     
     def generate_embeddings(self, keywords: List[str]) -> np.ndarray:
         """
         Generate embeddings for keywords
-        
+
         Args:
             keywords: List of cleaned keywords
-            
+
         Returns:
             Numpy array of shape (n_keywords, embedding_dim)
         """
+        self.logger.info(f" Generating embeddings for {len(keywords)} keywords")
+
         # Check cache first
         cache_key = self._get_cache_key(keywords)
         cached = self._get_from_cache(cache_key)
         if cached is not None:
+            self.logger.info(" Using cached embeddings")
             return cached
-        
+
         # Load model
         self.load_model()
-        
+
         # Generate embeddings
+        self.logger.info(" Computing embeddings with SentenceTransformer...")
         embeddings = self.model.encode(keywords, show_progress_bar=True)
-        
+        self.logger.info(f" Generated embeddings with shape: {embeddings.shape}")
+
         # Cache results
         self._save_to_cache(cache_key, embeddings)
-        
+
         return embeddings
     
     def _get_cache_key(self, keywords: List[str]) -> str:

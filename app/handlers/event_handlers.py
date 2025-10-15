@@ -1,8 +1,8 @@
 import redis
 import json
 from app.config import Config
-from app.services.keyword_parser import KeywordParser
-from app.services.pipeline import ProcessingPipeline
+from app.services.processing.keyword_parser import KeywordParser
+from app.services.processing.pipeline import ProcessingPipeline
 from slack_sdk import WebClient
 
 redis_client = redis.from_url(Config.REDIS_URL) if Config.REDIS_URL else None

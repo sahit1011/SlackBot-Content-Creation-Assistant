@@ -27,11 +27,17 @@ class IdeaGenerator:
             Post idea dictionary
         """
         keywords = cluster['keywords']
+        cluster_name = cluster['cluster_name']
+
+        self.logger.info(f" Generating post idea for cluster '{cluster_name}'")
 
         try:
+            self.logger.info(" Calling Groq API for idea generation")
             idea = self._generate_with_llm(keywords, outline)
+            self.logger.info(f" Post idea generated: '{idea.get('title', 'N/A')}'")
         except Exception as e:
             error_msg = f"LLM Idea Generation Failed: {str(e)}"
+            self.logger.error(error_msg)
             print(error_msg)
             raise Exception(error_msg)  # Re-raise to stop pipeline
 

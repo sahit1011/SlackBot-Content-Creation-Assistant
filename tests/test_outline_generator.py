@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Test script for OutlineGenerator"""
 
-from app.services.outline_generator import OutlineGenerator
+from app.services.ai.outline_generator import OutlineGenerator
 import json
 
 def test_outline_generator():

@@ -25,6 +25,7 @@ class Config:
     REDIS_URL = os.getenv('REDIS_URL')
 
     # APIs
+    SERP_API_KEY = os.getenv('SERP_API_KEY')
     BRAVE_API_KEY = os.getenv('BRAVE_API_KEY')
     GROQ_API_KEY = os.getenv('GROQ_API_KEY')
     SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')

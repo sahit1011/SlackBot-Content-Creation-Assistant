@@ -2,7 +2,7 @@
 """Test script for IdeaGenerator"""
 
 import logging
-from app.services.idea_generator import IdeaGenerator
+from app.services.ai.idea_generator import IdeaGenerator
 import json
 
 def test_idea_generator():

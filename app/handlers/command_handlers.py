@@ -1,8 +1,8 @@
 import redis
 import json
 from app.config import Config
-from app.services.keyword_parser import KeywordParser
-from app.services.pipeline import ProcessingPipeline
+from app.services.processing.keyword_parser import KeywordParser
+from app.services.processing.pipeline import ProcessingPipeline
 
 redis_client = redis.from_url(Config.REDIS_URL) if Config.REDIS_URL else None
 
@@ -53,7 +53,7 @@ def register(app):
 
         user_id = body['user_id']
 
-        from app.services.database import DatabaseService
+        from app.services.data.database import DatabaseService
         db = DatabaseService()
 
         history = db.get_user_history(user_id, limit=5)
@@ -113,7 +113,7 @@ def register(app):
             say("⚠️ Invalid email format. Please provide a valid email address.")
             return
 
-        from app.services.database import DatabaseService
+        from app.services.data.database import DatabaseService
         db = DatabaseService()
 
         # Get or create user

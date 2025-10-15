@@ -3,6 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 from typing import List, Dict
 import time
+import logging
 
 class ContentScraper:
     """Scrape and extract content structure from web pages"""
@@ -12,6 +13,7 @@ class ContentScraper:
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
+        self.logger = logging.getLogger(__name__)
 
     def scrape_urls(self, urls: List[str]) -> List[Dict]:
         """
@@ -23,21 +25,25 @@ class ContentScraper:
         Returns:
             List of scraping results
         """
+        self.logger.info(f" Starting to scrape {len(urls)} URLs")
         results = []
 
-        for url in urls:
+        for i, url in enumerate(urls, 1):
             try:
+                self.logger.debug(f" Scraping {i}/{len(urls)}: {url}")
                 result = self.scrape_single(url)
                 results.append(result)
                 time.sleep(0.5)  # Be polite
             except Exception as e:
-                print(f"Error scraping {url}: {str(e)}")
+                self.logger.error(f" Error scraping {url}: {str(e)}")
                 results.append({
                     'url': url,
                     'success': False,
                     'error': str(e)
                 })
 
+        successful = sum(1 for r in results if r.get('success'))
+        self.logger.info(f" Scraping complete: {successful}/{len(urls)} URLs successful")
         return results
 
     def scrape_single(self, url: str) -> Dict:

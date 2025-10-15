@@ -1,17 +1,18 @@
 # app/services/pipeline.py
 import threading
 import os
+import logging
 from typing import List
-from app.services.keyword_cleaner import KeywordCleaner
-from app.services.embedding_generator import EmbeddingGenerator
-from app.services.keyword_clusterer import KeywordClusterer
-from app.services.web_search import WebSearchService
-from app.services.content_scraper import ContentScraper
-from app.services.outline_generator import OutlineGenerator
-from app.services.idea_generator import IdeaGenerator
-from app.services.database import DatabaseService
-from app.services.report_generator import ReportGenerator
-from app.services.email_service import EmailService
+from app.services.processing.keyword_cleaner import KeywordCleaner
+from app.services.ai.embedding_generator import EmbeddingGenerator
+from app.services.processing.keyword_clusterer import KeywordClusterer
+from app.services.external.web_search import WebSearchService
+from app.services.processing.content_scraper import ContentScraper
+from app.services.ai.outline_generator import OutlineGenerator
+from app.services.ai.idea_generator import IdeaGenerator
+from app.services.data.database import DatabaseService
+from app.services.processing.report_generator import ReportGenerator
+from app.services.external.email_service import EmailService
 from app.utils.slack_formatters import SlackFormatter
 
 class ProcessingPipeline:
@@ -27,6 +28,15 @@ class ProcessingPipeline:
         user = self.db.get_or_create_user(user_id)
         self.user_id = user['id']
 
+        # Setup logging
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.INFO)
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+        formatter = logging.Formatter('[%(asctime)s] %(levelname)s - %(message)s')
+        console_handler.setFormatter(formatter)
+        self.logger.addHandler(console_handler)
+
     def start_from_keywords(self, keywords: List[str], source: str = 'text'):
         """Start processing in background thread"""
         thread = threading.Thread(
@@ -41,12 +51,18 @@ class ProcessingPipeline:
         batch_id = None
 
         try:
+            self.logger.info(" STARTING CONTENT CREATION PIPELINE")
+            self.logger.info(f" Received {len(raw_keywords)} raw keywords from {source}")
+
             # Step 1: Clean keywords
-            self._send_progress("🧹 Cleaning keywords...")
+            self.logger.info(" STEP 1: Keyword Cleaning")
+            self._send_progress(" Cleaning keywords...")
             cleaner = KeywordCleaner()
             result = cleaner.clean_keywords(raw_keywords)
             cleaned_keywords = result['keywords']
 
+            self.logger.info(f" Keyword cleaning complete: {result['original_count']} → {result['cleaned_count']} unique keywords")
+            self.logger.info(f" Cleaned keywords: {cleaned_keywords[:5]}{'...' if len(cleaned_keywords) > 5 else ''}")
             self._send_progress(
                 f"✓ Cleaned: {result['original_count']} → {result['cleaned_count']} unique keywords"
             )
@@ -61,16 +77,22 @@ class ProcessingPipeline:
             batch_id = batch_data['id']
 
             # Step 2: Generate embeddings
-            self._send_progress("🔍 Analyzing keyword relationships...")
+            self.logger.info(" STEP 2: Embedding Generation")
+            self._send_progress(" Analyzing keyword relationships...")
             embedding_gen = EmbeddingGenerator()
             embeddings = embedding_gen.generate_embeddings(cleaned_keywords)
+            self.logger.info(f" Generated embeddings for {len(cleaned_keywords)} keywords (shape: {embeddings.shape})")
 
             # Step 3: Cluster keywords
-            self._send_progress("📊 Grouping keywords into clusters...")
+            self.logger.info(" STEP 3: Keyword Clustering")
+            self._send_progress(" Grouping keywords into clusters...")
             clusterer = KeywordClusterer()
             clusters = clusterer.cluster_keywords(cleaned_keywords, embeddings)
+            self.logger.info(f" Created {len(clusters)} keyword clusters")
+            for i, cluster in enumerate(clusters, 1):
+                self.logger.info(f" Cluster {i}: '{cluster['cluster_name']}' ({cluster['keyword_count']} keywords)")
 
-            self._send_progress(f"✓ Created {len(clusters)} keyword clusters")
+            self._send_progress(f" Created {len(clusters)} keyword clusters")
 
             # Send cluster summary
             cluster_blocks = self.formatter.format_clusters_summary(clusters)
@@ -85,27 +107,41 @@ class ProcessingPipeline:
             outline_gen = OutlineGenerator()
             idea_gen = IdeaGenerator()
 
+            # Step 4: Process each cluster
+            self.logger.info(" STEP 4: Web Research & Content Generation")
             for idx, cluster in enumerate(clusters, 1):
-                self._send_progress(f"📝 Processing cluster {idx}/{len(clusters)}: {cluster['cluster_name']}")
+                cluster_name = cluster['cluster_name']
+                self.logger.info(f" Processing cluster {idx}/{len(clusters)}: '{cluster_name}'")
+                self._send_progress(f" Processing cluster {idx}/{len(clusters)}: {cluster_name}")
 
                 # Search top results
                 main_keyword = cluster['keywords'][0]
+                self.logger.info(f" Searching for '{main_keyword}' using SerpAPI")
                 search_results = search_service.search_single(main_keyword, count=5)
+                self.logger.info(f" Found {len(search_results)} search results")
 
                 # Scrape content
                 urls = [r['url'] for r in search_results[:3]]
+                self.logger.info(f" Scraping {len(urls)} top URLs: {urls}")
                 scraped_data = scraper.scrape_urls(urls)
+                successful_scrapes = sum(1 for r in scraped_data if r.get('success'))
+                self.logger.info(f" Successfully scraped {successful_scrapes}/{len(urls)} pages")
 
                 # Generate outline
+                self.logger.info("  Generating content outline using LLM")
                 outline = outline_gen.generate_outline(cluster, scraped_data)
                 cluster['outline'] = outline
+                self.logger.info(f"   Generated outline with {len(outline.get('sections', []))} sections")
 
                 # Generate post idea
+                self.logger.info("   Generating post idea using LLM")
                 post_idea = idea_gen.generate_idea(cluster, outline)
                 cluster['post_idea'] = post_idea
+                self.logger.info(f"   Generated post idea: '{post_idea.get('title', 'N/A')}'")
 
                 # Save cluster to database
                 self.db.save_cluster(batch_id, cluster, post_idea, outline)
+                self.logger.info("   Saved cluster data to database")
 
                 # Send detailed cluster info
                 detail_blocks = self.formatter.format_cluster_detail(
@@ -117,13 +153,15 @@ class ProcessingPipeline:
                 )
 
             # Step 5: Generate report
-            self._send_progress("📄 Generating comprehensive report...")
+            self.logger.info(" STEP 5: Report Generation")
+            self._send_progress(" Generating comprehensive report...")
             report_gen = ReportGenerator()
             pdf_path = report_gen.generate_report(
                 batch_data,
                 cleaned_keywords,
                 clusters
             )
+            self.logger.info(f" Generated PDF report: {pdf_path}")
 
             # Upload report to Slack
             try:
@@ -189,11 +227,13 @@ class ProcessingPipeline:
 
             # Update batch status
             self.db.update_batch_status(batch_id, 'completed')
+            self.logger.info(" Pipeline completed successfully")
 
             # Optional: Send email if user wants it (before file deletion)
             user_email = self.db.get_user_email(self.user_id)
 
             if user_email:
+                self.logger.info(f"📧 Sending report to user email: {user_email}")
                 email_service = EmailService()
                 email_sent = email_service.send_report(
                     user_email,
@@ -204,14 +244,18 @@ class ProcessingPipeline:
                 )
 
                 if email_sent:
+                    self.logger.info("✓ Report email sent successfully")
                     self.client.chat_postMessage(
                         channel=self.channel_id,
                         text="📧 Report also sent to your email!"
                     )
                     self.db.update_report_email_status(batch_id, True, user_email)
+                else:
+                    self.logger.warning("✗ Failed to send report email")
 
         except Exception as e:
             error_msg = str(e)
+            self.logger.error(f" PIPELINE ERROR: {error_msg}")
             print(f"Pipeline error: {error_msg}")
 
             # Send error to user

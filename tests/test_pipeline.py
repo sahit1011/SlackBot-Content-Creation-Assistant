@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Test script for ProcessingPipeline"""
 
-from app.services.pipeline import ProcessingPipeline
+from app.services.processing.pipeline import ProcessingPipeline
 from unittest.mock import Mock
 import time
 

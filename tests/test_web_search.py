@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Test script for WebSearchService"""
 
-from app.services.web_search import WebSearchService
+from app.services.external.web_search import WebSearchService
 import json
 
 def test_web_search():
