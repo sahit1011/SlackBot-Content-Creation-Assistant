@@ -160,3 +160,24 @@ class DatabaseService:
             })\
             .eq('batch_id', batch_id)\
             .execute()
+
+    def get_batch_by_id(self, batch_id: str) -> Optional[Dict]:
+        """Get batch by ID (alias for get_batch)"""
+        return self.get_batch(batch_id)
+
+    def get_clusters_by_batch(self, batch_id: str) -> List[Dict]:
+        """Get all clusters for a batch (alias for get_batch_clusters)"""
+        return self.get_batch_clusters(batch_id)
+
+    def update_cluster_outline(self, batch_id: str, cluster_id: int, new_outline: Dict, new_idea: Dict):
+        """Update cluster outline and idea after regeneration"""
+        self.client.table('keyword_clusters')\
+            .update({
+                'outline_json': new_outline,
+                'post_idea': new_idea.get('title', ''),
+                'post_idea_metadata': new_idea,
+                'updated_at': datetime.now().isoformat()
+            })\
+            .eq('batch_id', batch_id)\
+            .eq('cluster_number', cluster_id)\
+            .execute()
