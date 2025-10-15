@@ -106,22 +106,22 @@ class KeywordClusterer:
         """
         # Extract most common words (excluding stop words)
         stop_words = {'the', 'a', 'an', 'and', 'or', 'but', 'for', 'with', 'to'}
-        
+
         all_words = []
         for keyword in keywords:
             words = keyword.split()
             all_words.extend([w for w in words if w not in stop_words])
-        
+
         # Get most common words
         word_counts = Counter(all_words)
-        top_words = [word for word, count in word_counts.most_common(3)]
-        
+        top_words = [word for word, count in word_counts.most_common(2)]
+
         if not top_words:
             return f"Group {keywords[0][:15]}..."
-        
-        # Capitalize first letter of each word
-        cluster_name = ' '.join(word.capitalize() for word in top_words)
-        
+
+        # Capitalize first letter of each word and join with comma
+        cluster_name = ', '.join(word.capitalize() for word in top_words)
+
         return cluster_name
     
     def _create_single_cluster(self, keywords: List[str], cluster_id: int) -> Dict:
