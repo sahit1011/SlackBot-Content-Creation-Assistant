@@ -2,13 +2,6 @@
 
 A sophisticated Slack bot that helps content creators process keywords, generate ideas, and create structured content outlines using AI-powered analysis and web research.
 
-## 🎯 Live Demo & Testing
-
-**🚀 Hosted Instance:** [https://slackbot-content-creation-assistant.onrender.com](https://slackbot-content-creation-assistant.onrender.com)
-
-**⚠️ Important:** This is a backend service for Slack integration. To test the bot, you need to set up your own Slack app (see testing instructions below).
-
-**Health Check:** [https://slackbot-content-creation-assistant.onrender.com/health](https://slackbot-content-creation-assistant.onrender.com/health)
 
 ## 🚀 Features
 
