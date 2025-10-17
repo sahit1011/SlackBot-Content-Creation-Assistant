@@ -87,33 +87,45 @@ class DatabaseService:
 
     def get_user_history(self, user_id: str, limit: int = 10) -> List[Dict]:
         """Get user's processing history"""
-        response = self.client.table('keyword_batches')\
-            .select('*')\
-            .eq('user_id', user_id)\
-            .order('created_at', desc=True)\
-            .limit(limit)\
-            .execute()
+        try:
+            response = self.client.table('keyword_batches')\
+                .select('*')\
+                .eq('user_id', user_id)\
+                .order('created_at', desc=True)\
+                .limit(limit)\
+                .execute()
 
-        return response.data if response.data else []
+            return response.data if response.data else []
+        except Exception as e:
+            print(f"Error fetching user history for {user_id}: {str(e)}")
+            return []
 
     def get_batch(self, batch_id: str) -> Optional[Dict]:
         """Get batch by ID"""
-        response = self.client.table('keyword_batches')\
-            .select('*')\
-            .eq('id', batch_id)\
-            .execute()
+        try:
+            response = self.client.table('keyword_batches')\
+                .select('*')\
+                .eq('id', batch_id)\
+                .execute()
 
-        return response.data[0] if response.data else None
+            return response.data[0] if response.data else None
+        except Exception as e:
+            print(f"Error fetching batch: {str(e)}")
+            return None
 
     def get_batch_clusters(self, batch_id: str) -> List[Dict]:
         """Get all clusters for a batch"""
-        response = self.client.table('keyword_clusters')\
-            .select('*')\
-            .eq('batch_id', batch_id)\
-            .order('cluster_number')\
-            .execute()
+        try:
+            response = self.client.table('keyword_clusters')\
+                .select('*')\
+                .eq('batch_id', batch_id)\
+                .order('cluster_number')\
+                .execute()
 
-        return response.data if response.data else []
+            return response.data if response.data else []
+        except Exception as e:
+            print(f"Error fetching clusters for batch {batch_id}: {str(e)}")
+            return []
 
     def get_or_create_user(self, slack_user_id: str, display_name: str = None) -> Dict:
         """Get or create user record"""
@@ -161,33 +173,64 @@ class DatabaseService:
             .eq('batch_id', batch_id)\
             .execute()
 
-    def get_batch_by_id(self, batch_id: str) -> Optional[Dict]:
+    def get_batch_by_id(self, batch_id: str, user_id: str = None) -> Optional[Dict]:
         """Get batch by ID with fuzzy matching for partial IDs"""
+        # If user_id is provided and looks like a Slack ID (starts with 'U'), convert it first
+        if user_id and user_id.startswith('U'):
+            try:
+                user = self.get_or_create_user(user_id)
+                if user:
+                    user_id = user['id']
+                else:
+                    return None
+            except Exception as e:
+                print(f"Error converting Slack user ID to UUID: {str(e)}")
+                return None
+
         try:
             # Try exact match first
             batch = self.get_batch(batch_id)
             if batch:
+                # If user_id provided, verify ownership
+                if user_id and str(batch.get('user_id', '')) != str(user_id):
+                    return None
                 return batch
 
-            # Try partial match (first 8 chars) - get user's batches only and filter
-            # This is more efficient and secure than fetching all batches
-            from app.services.data.database import DatabaseService
-            # We need to get the current user's batches, but we don't have user_id here
-            # So we'll fetch recent batches and filter by partial ID
-            all_batches = self.client.table('keyword_batches')\
-                .select('*')\
-                .order('created_at', desc=True)\
-                .limit(50)\
-                .execute()
+            # Try partial match (first 8 chars) - filter by user if provided
+            query = self.client.table('keyword_batches').select('*').order('created_at', desc=True)
 
-            if all_batches.data:
-                for batch in all_batches.data:
+            if user_id:
+                query = query.eq('user_id', user_id)
+
+            query = query.limit(50)
+            user_batches = query.execute()
+
+            if user_batches.data:
+                for batch in user_batches.data:
                     if str(batch['id']).startswith(batch_id):
                         return batch
 
             return None
         except Exception as e:
             print(f"Error fetching batch: {str(e)}")
+            # If it's a UUID validation error, try to find by partial match using text casting
+            if 'invalid input syntax for type uuid' in str(e):
+                try:
+                    # Try partial match without exact UUID validation - cast id to text for ilike
+                    query = self.client.table('keyword_batches').select('*').order('created_at', desc=True)
+
+                    if user_id:
+                        query = query.eq('user_id', user_id)
+
+                    # Use text casting for partial matching
+                    query = query.ilike('id::text', f'{batch_id}%').limit(50)
+                    user_batches = query.execute()
+
+                    if user_batches.data:
+                        return user_batches.data[0]  # Return first match
+                except Exception as e2:
+                    print(f"Error in fallback batch search: {str(e2)}")
+
             return None
 
     def get_clusters_by_batch(self, batch_id: str) -> List[Dict]:
@@ -200,9 +243,8 @@ class DatabaseService:
             .update({
                 'outline_json': new_outline,
                 'post_idea': new_idea.get('title', ''),
-                'post_idea_metadata': new_idea,
-                'updated_at': datetime.now().isoformat()
+                'post_idea_metadata': new_idea
             })\
             .eq('batch_id', batch_id)\
-            .eq('cluster_number', cluster_id)\
+            .eq('id', cluster_id)\
             .execute()

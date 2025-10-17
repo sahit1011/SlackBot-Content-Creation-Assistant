@@ -118,7 +118,7 @@ class ProcessingPipeline:
                 self._send_progress(f" Processing cluster {idx}/{len(clusters)}: {cluster_name}")
 
                 # Search top results
-                main_keyword = cluster['keywords'][0]
+                main_keyword = cluster['keywords'][0] if cluster['keywords'] else cluster_name.split()[0]
                 self.logger.info(f" Searching for '{main_keyword}' using SerpAPI")
                 search_results = search_service.search_single(main_keyword, count=5)
                 self.logger.info(f" Found {len(search_results)} search results")
@@ -168,7 +168,7 @@ class ProcessingPipeline:
             pdf_path = report_gen.generate_report(
                 batch_data,
                 cleaned_keywords,
-                clusters if 'clusters' in locals() else []
+                clusters
             )
             self.logger.info(f" Generated PDF report: {pdf_path}")
 

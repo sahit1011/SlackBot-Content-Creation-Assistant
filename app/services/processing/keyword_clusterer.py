@@ -199,7 +199,10 @@ Make sure each name is specific and reflects the unique aspect of that cluster."
             top_words = [word for word, count in word_counts.most_common(2)]
 
             if not top_words:
-                cluster_name = f"Keyword Group {keywords[0][:15]}..."
+                if keywords:
+                    cluster_name = f"Keyword Group {keywords[0][:15]}..."
+                else:
+                    cluster_name = "Empty Keyword Group"
             else:
                 cluster_name = ' '.join(word.capitalize() for word in top_words)
 

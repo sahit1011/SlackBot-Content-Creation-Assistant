@@ -215,7 +215,8 @@ class ReportGenerator:
 
         # Add cluster entries
         for idx, cluster in enumerate(clusters, 1):
-            cluster_name = cluster['cluster_name'][:30] + "..." if len(cluster['cluster_name']) > 30 else cluster['cluster_name']
+            cluster_name = cluster.get('cluster_name', f'Cluster {idx}')
+            cluster_name = cluster_name[:30] + "..." if len(cluster_name) > 30 else cluster_name
             toc_data.append([f"   2.{idx} {cluster_name}", str(4 + idx)])
 
         toc_table = Table(toc_data, colWidths=[4*inch, 0.5*inch])
@@ -246,20 +247,21 @@ class ReportGenerator:
 
         summary_text = f"""
         This report contains a comprehensive content strategy analysis for {len(keywords)} keywords.
-        The analysis identified {len(clusters)} distinct content clusters, each with detailed
+        The analysis identified {len(clusters) if clusters else 0} distinct content clusters, each with detailed
         outlines and post ideas based on competitive research of top-ranking content.
         """
         content.append(Paragraph(summary_text, self.styles['Normal']))
         content.append(Spacer(1, 0.3*inch))
 
         # Statistics table
+        cluster_count = len(clusters) if clusters else 0
         stats_data = [
             ['Metric', 'Value'],
             ['Total Keywords', str(len(keywords))],
             ['Unique Keywords', str(batch_data.get('keyword_count', len(keywords)))],
-            ['Content Clusters', str(len(clusters))],
-            ['Outlines Generated', str(len(clusters))],
-            ['Post Ideas', str(len(clusters))]
+            ['Content Clusters', str(cluster_count)],
+            ['Outlines Generated', str(cluster_count)],
+            ['Post Ideas', str(cluster_count)]
         ]
 
         stats_table = Table(stats_data, colWidths=[3*inch, 2*inch])
@@ -292,7 +294,7 @@ class ReportGenerator:
         content.append(Spacer(1, 0.2*inch))
 
         # Summary statistics
-        total_keywords = sum(len(cluster['keywords']) for cluster in clusters)
+        total_keywords = sum(len(cluster.get('keywords', [])) for cluster in clusters)
         content.append(Paragraph("1.1 Keywords Summary", self.styles['SubSection']))
         summary_text = f"""
         Total Keywords Processed: {total_keywords}<br/>
@@ -302,6 +304,10 @@ class ReportGenerator:
         content.append(Paragraph(summary_text, self.styles['Normal']))
         content.append(Spacer(1, 0.3*inch))
 
+        if not clusters:
+            content.append(Paragraph("No clusters available for analysis.", self.styles['CustomBodyText']))
+            return content
+
         # Keywords organized by clusters in a table format
         content.append(Paragraph("1.2 Keywords by Content Cluster", self.styles['SubSection']))
         content.append(Spacer(1, 0.1*inch))
@@ -310,19 +316,22 @@ class ReportGenerator:
         table_data = [['Cluster Name', 'Keywords Count', 'Keywords List']]
 
         for cluster in clusters:
-            cluster_name = cluster['cluster_name']
-            keyword_count = cluster['keyword_count']
-            keywords_list = cluster['keywords']
+            cluster_name = cluster.get('cluster_name', f'Cluster {len(table_data)}')
+            keywords_list = cluster.get('keywords', [])
+            keyword_count = len(keywords_list)
 
             # Format keywords list - show all keywords line by line in a single cell
-            if len(keywords_list) <= 10:
-                # Show all keywords, one per line
-                keywords_display = "\n".join(f"• {kw}" for kw in keywords_list)
+            if keywords_list:
+                if len(keywords_list) <= 10:
+                    # Show all keywords, one per line
+                    keywords_display = "\n".join(f"• {kw}" for kw in keywords_list)
+                else:
+                    # Show first 10, then truncate with count
+                    shown_keywords = "\n".join(f"• {kw}" for kw in keywords_list[:10])
+                    remaining = len(keywords_list) - 10
+                    keywords_display = f"{shown_keywords}\n... and {remaining} more keywords"
             else:
-                # Show first 10, then truncate with count
-                shown_keywords = "\n".join(f"• {kw}" for kw in keywords_list[:10])
-                remaining = len(keywords_list) - 10
-                keywords_display = f"{shown_keywords}\n... and {remaining} more keywords"
+                keywords_display = "No keywords available"
 
             table_data.append([cluster_name, str(keyword_count), keywords_display])
 
@@ -331,7 +340,7 @@ class ReportGenerator:
         keywords_table = Table(table_data, colWidths=col_widths)
 
         # Style the table
-        keywords_table.setStyle(TableStyle([
+        table_style = [
             # Header styling
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2b6cb0')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
@@ -353,12 +362,13 @@ class ReportGenerator:
 
             # Grid lines
             ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#e2e8f0')),
+        ]
 
-            # Alternate row colors
-            ('BACKGROUND', (0, 2), (-1, 2), colors.HexColor('#edf2f7')),
-            ('BACKGROUND', (0, 4), (-1, 4), colors.HexColor('#edf2f7')),
-            ('BACKGROUND', (0, 6), (-1, 6), colors.HexColor('#edf2f7')),
-        ]))
+        # Alternate row colors for existing rows
+        for i in range(2, len(table_data), 2):
+            table_style.append(('BACKGROUND', (0, i), (-1, i), colors.HexColor('#edf2f7')))
+
+        keywords_table.setStyle(TableStyle(table_style))
 
         content.append(keywords_table)
 
@@ -371,19 +381,29 @@ class ReportGenerator:
         content.append(Paragraph("2. Content Clusters & Strategy", self.styles['SectionHeader']))
         content.append(Spacer(1, 0.2*inch))
 
+        if not clusters:
+            content.append(Paragraph("No clusters available for report generation.", self.styles['CustomBodyText']))
+            return content
+
         for idx, cluster in enumerate(clusters, 1):
             # Cluster header with better formatting - use LLM-generated cluster name
-            cluster_title = f"2.{idx} Content Cluster: {cluster['cluster_name']}"
+            cluster_name = cluster.get('cluster_name', f'Cluster {idx}')
+            cluster_title = f"2.{idx} Content Cluster: {cluster_name}"
             content.append(Paragraph(cluster_title, self.styles['SubSection']))
             content.append(Spacer(1, 0.1*inch))
 
             # Keywords in this cluster with professional styling
+            keywords_list = cluster.get('keywords', [])
+            keyword_count = len(keywords_list)
             content.append(Paragraph(
-                f"<b>Keywords ({cluster['keyword_count']}):</b>",
+                f"<b>Keywords ({keyword_count}):</b>",
                 self.styles['Highlight']
             ))
-            keywords_text = ", ".join(cluster['keywords'])
-            content.append(Paragraph(keywords_text, self.styles['CustomBodyText']))
+            if keywords_list:
+                keywords_text = ", ".join(keywords_list)
+                content.append(Paragraph(keywords_text, self.styles['CustomBodyText']))
+            else:
+                content.append(Paragraph("No keywords available", self.styles['CustomBodyText']))
             content.append(Spacer(1, 0.15*inch))
 
             # Enhanced Post idea section

@@ -168,8 +168,8 @@ def register(app):
         user_id = user['id']
 
         # Verify batch exists and belongs to user
-        batch = db.get_batch_by_id(batch_id)
-        if not batch or str(batch.get('user_id', '')) != str(user_id):
+        batch = db.get_batch_by_id(batch_id, user_id)
+        if not batch:
             client.chat_postMessage(
                 channel=channel_id,
                 text="❌ Batch not found or access denied."
@@ -184,7 +184,7 @@ def register(app):
             return
 
         # Get all clusters for this batch
-        clusters = db.get_clusters_by_batch(batch_id)
+        clusters = db.get_clusters_by_batch(batch['id'])
 
         if not clusters:
             client.chat_postMessage(
@@ -202,7 +202,7 @@ def register(app):
         # Start regeneration in background
         thread = threading.Thread(
             target=regenerate_outlines,
-            args=(client, channel_id, user_id, batch_id, clusters)
+            args=(client, channel_id, user_id, batch['id'], clusters)
         )
         thread.daemon = True
         thread.start()
@@ -227,8 +227,8 @@ def register(app):
         user_id = user['id']
 
         # Verify batch exists and belongs to user
-        batch = db.get_batch_by_id(batch_id)
-        if not batch or str(batch.get('user_id', '')) != str(user_id):
+        batch = db.get_batch_by_id(batch_id, user_id)
+        if not batch:
             client.chat_postMessage(
                 channel=channel_id,
                 text="❌ Batch not found or access denied."
@@ -236,7 +236,7 @@ def register(app):
             return
 
         # Get clusters for this batch
-        clusters = db.get_clusters_by_batch(batch_id)
+        clusters = db.get_clusters_by_batch(batch['id'])
 
         if not clusters:
             client.chat_postMessage(
@@ -332,8 +332,8 @@ def register(app):
         db = DatabaseService()
         
         # Verify batch exists and belongs to user
-        batch = db.get_batch_by_id(batch_id)
-        if not batch or str(batch.get('user_id', '')) != str(user_id):
+        batch = db.get_batch_by_id(batch_id, user_id)
+        if not batch:
             client.chat_postMessage(
                 channel=channel_id,
                 text="❌ Batch not found or access denied."
@@ -348,7 +348,7 @@ def register(app):
             return
         
         # Get clusters for this batch
-        clusters = db.get_clusters_by_batch(batch_id)
+        clusters = db.get_clusters_by_batch(batch['id'])
         
         if not clusters:
             client.chat_postMessage(
@@ -381,7 +381,7 @@ def register(app):
         # Start regeneration in background
         thread = threading.Thread(
             target=regenerate_outlines,
-            args=(client, channel_id, user_id, batch_id, clusters)
+            args=(client, channel_id, user_id, batch['id'], clusters)
         )
         thread.daemon = True
         thread.start()
@@ -426,7 +426,7 @@ def register(app):
                 new_idea = idea_gen.generate_idea(cluster, new_outline)
                 
                 # Update database
-                db.update_cluster_outline(batch_id, cluster.get('cluster_id', cluster.get('id')), new_outline, new_idea)
+                db.update_cluster_outline(batch_id, cluster['id'], new_outline, new_idea)
                 
                 # Send updated results
                 detail_blocks = formatter.format_cluster_detail(
@@ -540,8 +540,8 @@ def register(app):
         db = DatabaseService()
         
         # Verify batch exists and belongs to user
-        batch = db.get_batch_by_id(batch_id)
-        if not batch or str(batch.get('user_id', '')) != str(user_id):
+        batch = db.get_batch_by_id(batch_id, user_id)
+        if not batch:
             client.chat_postMessage(
                 channel=channel_id,
                 text="❌ Batch not found or access denied."
@@ -558,7 +558,7 @@ def register(app):
         # Start export in background
         thread = threading.Thread(
             target=export_batch,
-            args=(client, channel_id, batch_id, destination)
+            args=(client, channel_id, batch_id, destination, user_id)
         )
         thread.daemon = True
         thread.start()
@@ -568,14 +568,14 @@ def register(app):
             text=f"📤 Starting export to {destination.title()} for batch `{batch_id[:8]}`..."
         )
     
-    def export_batch(client, channel_id, batch_id, destination):
+    def export_batch(client, channel_id, batch_id, destination, user_id=None):
         """Export batch data to external service"""
         try:
             from app.services.data.database import DatabaseService
             from app.config import Config
 
             db = DatabaseService()
-            batch = db.get_batch_by_id(batch_id)
+            batch = db.get_batch_by_id(batch_id, user_id)
             clusters = db.get_clusters_by_batch(batch_id)
 
             if not batch or not clusters:
