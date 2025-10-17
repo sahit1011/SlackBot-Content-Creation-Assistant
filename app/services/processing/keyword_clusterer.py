@@ -61,16 +61,23 @@ class KeywordClusterer:
             ]
 
             if cluster_keywords:
-                cluster_name = self._generate_cluster_name(cluster_keywords)
                 cluster = {
                     'cluster_id': cluster_id,
                     'cluster_number': cluster_id + 1,
-                    'cluster_name': cluster_name,
+                    'cluster_name': f"Cluster {cluster_id + 1}",  # Temporary name
                     'keywords': sorted(cluster_keywords),
                     'keyword_count': len(cluster_keywords)
                 }
                 clusters.append(cluster)
-                self.logger.info(f" Cluster {cluster_id + 1}: '{cluster_name}' ({len(cluster_keywords)} keywords)")
+                self.logger.info(f" Cluster {cluster_id + 1}: ({len(cluster_keywords)} keywords)")
+
+        # Generate names for all clusters in one batch call
+        if clusters:
+            cluster_names = self._generate_cluster_names_batch(clusters)
+            for i, cluster in enumerate(clusters):
+                if i < len(cluster_names):
+                    cluster['cluster_name'] = cluster_names[i]
+                self.logger.info(f" Cluster {cluster['cluster_number']}: '{cluster['cluster_name']}' ({cluster['keyword_count']} keywords)")
 
         self.logger.info(f" Clustering complete: {len(clusters)} clusters created")
         return clusters
@@ -100,29 +107,105 @@ class KeywordClusterer:
         optimal_k = max(scores, key=lambda x: x[1])[0]
         return optimal_k
     
-    def _generate_cluster_name(self, keywords: List[str]) -> str:
+    def _generate_cluster_names_batch(self, clusters: List[Dict]) -> List[str]:
         """
-        Generate descriptive name for cluster
+        Generate names for all clusters in one batch LLM call
         """
-        # Extract most common words (excluding stop words)
-        stop_words = {'the', 'a', 'an', 'and', 'or', 'but', 'for', 'with', 'to'}
+        try:
+            # Use Groq directly to avoid circular imports
+            from groq import Groq
+            from app.config import Config
 
-        all_words = []
-        for keyword in keywords:
-            words = keyword.split()
-            all_words.extend([w for w in words if w not in stop_words])
+            groq_client = Groq(api_key=Config.GROQ_API_KEY)
 
-        # Get most common words
-        word_counts = Counter(all_words)
-        top_words = [word for word, count in word_counts.most_common(2)]
+            # Build the prompt with all cluster information
+            cluster_info = []
+            for i, cluster in enumerate(clusters, 1):
+                keywords_str = ', '.join(cluster['keywords'][:8])  # Limit keywords per cluster
+                if len(cluster['keywords']) > 8:
+                    keywords_str += f"... (+{len(cluster['keywords']) - 8} more)"
+                cluster_info.append(f"Cluster {i}: {keywords_str}")
 
-        if not top_words:
-            return f"Group {keywords[0][:15]}..."
+            prompt = f"""Here are {len(clusters)} keyword clusters from a semantic analysis:
 
-        # Capitalize first letter of each word and join with comma
-        cluster_name = ', '.join(word.capitalize() for word in top_words)
+{chr(10).join(cluster_info)}
 
-        return cluster_name
+Generate unique, descriptive names for each cluster (2-4 words each). Each name should capture the main theme of that specific cluster and be different from the others.
+
+Return your response as a JSON array of strings, like this:
+["Cluster Name 1", "Cluster Name 2", "Cluster Name 3", ...]
+
+Make sure each name is specific and reflects the unique aspect of that cluster."""
+
+            # Use the LLM to generate cluster names
+            response = groq_client.chat.completions.create(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a content strategist. Generate unique, descriptive names for keyword clusters based on their semantic groupings."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                model="llama-3.1-8b-instant",
+                temperature=0.3,
+                max_tokens=200  # Enough for array of names
+            )
+
+            import json
+            response_text = response.choices[0].message.content.strip()
+
+            # Try to parse as JSON array
+            try:
+                cluster_names = json.loads(response_text)
+                if isinstance(cluster_names, list) and len(cluster_names) == len(clusters):
+                    return cluster_names
+            except json.JSONDecodeError:
+                # Try to extract array from text if JSON parsing fails
+                import re
+                array_match = re.search(r'\[.*\]', response_text, re.DOTALL)
+                if array_match:
+                    try:
+                        cluster_names = json.loads(array_match.group())
+                        if isinstance(cluster_names, list) and len(cluster_names) == len(clusters):
+                            return cluster_names
+                    except:
+                        pass
+
+            # If parsing fails, generate fallback names
+            self.logger.warning("Failed to parse LLM response for cluster names, using fallbacks")
+            return self._generate_fallback_cluster_names(clusters)
+
+        except Exception as e:
+            self.logger.warning(f"Failed to generate batch cluster names: {e}")
+            return self._generate_fallback_cluster_names(clusters)
+
+    def _generate_fallback_cluster_names(self, clusters: List[Dict]) -> List[str]:
+        """Generate fallback cluster names using word frequency analysis"""
+        names = []
+        for cluster in clusters:
+            keywords = cluster['keywords']
+            stop_words = {'the', 'a', 'an', 'and', 'or', 'but', 'for', 'with', 'to'}
+
+            all_words = []
+            for keyword in keywords:
+                words = keyword.split()
+                all_words.extend([w for w in words if w not in stop_words])
+
+            # Get most common words
+            word_counts = Counter(all_words)
+            top_words = [word for word, count in word_counts.most_common(2)]
+
+            if not top_words:
+                cluster_name = f"Keyword Group {keywords[0][:15]}..."
+            else:
+                cluster_name = ' '.join(word.capitalize() for word in top_words)
+
+            names.append(cluster_name)
+
+        return names
     
     def _create_single_cluster(self, keywords: List[str], cluster_id: int) -> Dict:
         """Create a single cluster for all keywords"""

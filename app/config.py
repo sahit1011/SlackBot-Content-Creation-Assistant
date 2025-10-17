@@ -31,6 +31,13 @@ class Config:
     SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')
     SENDGRID_FROM_EMAIL = os.getenv('SENDGRID_FROM_EMAIL')
 
+    # Notion Integration
+    NOTION_API_KEY = os.getenv('NOTION_API_KEY')
+    NOTION_DATABASE_ID = os.getenv('NOTION_DATABASE_ID')
+
+    # Google Sheets Integration
+    GOOGLE_CREDENTIALS_FILE = os.getenv('GOOGLE_CREDENTIALS_FILE')
+
     # Application Settings
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
     MAX_KEYWORDS = int(os.getenv('MAX_KEYWORDS', '1000'))

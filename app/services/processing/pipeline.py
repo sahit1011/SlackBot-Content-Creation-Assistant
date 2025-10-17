@@ -27,6 +27,8 @@ class ProcessingPipeline:
         # Ensure user exists in database and get UUID
         user = self.db.get_or_create_user(user_id)
         self.user_id = user['id']
+        # Initialize clusters count for error handling
+        self.clusters_count = 0
 
         # Setup logging
         self.logger = logging.getLogger(__name__)
@@ -88,6 +90,7 @@ class ProcessingPipeline:
             self._send_progress(" Grouping keywords into clusters...")
             clusterer = KeywordClusterer()
             clusters = clusterer.cluster_keywords(cleaned_keywords, embeddings)
+            self.clusters_count = len(clusters)  # Store count for error handling
             self.logger.info(f" Created {len(clusters)} keyword clusters")
             for i, cluster in enumerate(clusters, 1):
                 self.logger.info(f" Cluster {i}: '{cluster['cluster_name']}' ({cluster['keyword_count']} keywords)")
@@ -155,11 +158,17 @@ class ProcessingPipeline:
             # Step 5: Generate report
             self.logger.info(" STEP 5: Report Generation")
             self._send_progress(" Generating comprehensive report...")
+            # Debug: Check if clusters is available
+            self.logger.info(f"DEBUG: Clusters defined in scope: {'clusters' in locals()}")
+            if 'clusters' in locals():
+                self.logger.info(f"DEBUG: Clusters length: {len(clusters)}")
+            else:
+                self.logger.error("DEBUG: Clusters variable not found in locals")
             report_gen = ReportGenerator()
             pdf_path = report_gen.generate_report(
                 batch_data,
                 cleaned_keywords,
-                clusters
+                clusters if 'clusters' in locals() else []
             )
             self.logger.info(f" Generated PDF report: {pdf_path}")
 
@@ -215,10 +224,10 @@ class ProcessingPipeline:
 
             # Step 6: Send completion summary
             summary_blocks = self.formatter.format_completion_summary({
-                'keyword_count': len(cleaned_keywords),
-                'cluster_count': len(clusters),
-                'outline_count': len(clusters),
-                'idea_count': len(clusters)
+                'keyword_count': len(cleaned_keywords) if 'cleaned_keywords' in locals() else 0,
+                'cluster_count': self.clusters_count,
+                'outline_count': self.clusters_count,
+                'idea_count': self.clusters_count
             })
             self.client.chat_postMessage(
                 channel=self.channel_id,
@@ -240,7 +249,7 @@ class ProcessingPipeline:
                     pdf_path,
                     batch_id,
                     len(cleaned_keywords),
-                    len(clusters)
+                    self.clusters_count
                 )
 
                 if email_sent:

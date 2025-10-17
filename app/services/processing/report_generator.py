@@ -133,7 +133,7 @@ class ReportGenerator:
         story = []
 
         # Cover page
-        story.extend(self._create_cover_page(batch_data))
+        story.extend(self._create_cover_page(batch_data, clusters))
         story.append(PageBreak())
 
         # Table of contents
@@ -145,7 +145,7 @@ class ReportGenerator:
         story.append(PageBreak())
 
         # Keywords section
-        story.extend(self._create_keywords_section(batch_data, keywords))
+        story.extend(self._create_keywords_section(batch_data, clusters))
         story.append(PageBreak())
 
         # Clusters section
@@ -156,7 +156,7 @@ class ReportGenerator:
 
         return filepath
 
-    def _create_cover_page(self, batch_data: Dict) -> List:
+    def _create_cover_page(self, batch_data: Dict, clusters: List[Dict] = None) -> List:
         """Create professional cover page"""
         content = []
 
@@ -177,13 +177,16 @@ class ReportGenerator:
         from reportlab.lib.colors import Color
         content.append(Spacer(1, 0.1*inch))
 
+        # Get actual cluster count from the clusters parameter
+        actual_cluster_count = len(clusters) if clusters else 0
+
         # Batch info box
         batch_info = f"""
         <para align=center>
         <b>Report ID:</b> {batch_data.get('id', 'N/A')[:12]}<br/>
         <b>Generated:</b> {datetime.now().strftime('%B %d, %Y at %I:%M %p')}<br/>
         <b>Keywords Analyzed:</b> {batch_data.get('keyword_count', 0)}<br/>
-        <b>Content Clusters:</b> {len(batch_data.get('clusters', []))}
+        <b>Content Clusters:</b> {actual_cluster_count}
         </para>
         """
         content.append(Paragraph(batch_info, self.styles['CustomBodyText']))
@@ -281,28 +284,83 @@ class ReportGenerator:
 
         return content
 
-    def _create_keywords_section(self, batch_data: Dict, keywords: List[str]) -> List:
-        """Create keywords section"""
+    def _create_keywords_section(self, batch_data: Dict, clusters: List[Dict]) -> List:
+        """Create keywords section organized by clusters"""
         content = []
 
         content.append(Paragraph("1. Keywords Analysis", self.styles['SectionHeader']))
         content.append(Spacer(1, 0.2*inch))
 
-        # Raw keywords
-        content.append(Paragraph("1.1 Original Keywords", self.styles['SubSection']))
-        raw_keywords = batch_data.get('raw_keywords', keywords)
-        raw_text = ", ".join(raw_keywords[:50])
-        if len(raw_keywords) > 50:
-            raw_text += f" ... and {len(raw_keywords) - 50} more"
-        content.append(Paragraph(raw_text, self.styles['Normal']))
-        content.append(Spacer(1, 0.2*inch))
+        # Summary statistics
+        total_keywords = sum(len(cluster['keywords']) for cluster in clusters)
+        content.append(Paragraph("1.1 Keywords Summary", self.styles['SubSection']))
+        summary_text = f"""
+        Total Keywords Processed: {total_keywords}<br/>
+        Number of Content Clusters: {len(clusters)}<br/>
+        Average Keywords per Cluster: {total_keywords // len(clusters) if clusters else 0}
+        """
+        content.append(Paragraph(summary_text, self.styles['Normal']))
+        content.append(Spacer(1, 0.3*inch))
 
-        # Cleaned keywords
-        content.append(Paragraph("1.2 Processed Keywords", self.styles['SubSection']))
-        clean_text = ", ".join(keywords[:50])
-        if len(keywords) > 50:
-            clean_text += f" ... and {len(keywords) - 50} more"
-        content.append(Paragraph(clean_text, self.styles['Normal']))
+        # Keywords organized by clusters in a table format
+        content.append(Paragraph("1.2 Keywords by Content Cluster", self.styles['SubSection']))
+        content.append(Spacer(1, 0.1*inch))
+
+        # Create table data
+        table_data = [['Cluster Name', 'Keywords Count', 'Keywords List']]
+
+        for cluster in clusters:
+            cluster_name = cluster['cluster_name']
+            keyword_count = cluster['keyword_count']
+            keywords_list = cluster['keywords']
+
+            # Format keywords list - show all keywords line by line in a single cell
+            if len(keywords_list) <= 10:
+                # Show all keywords, one per line
+                keywords_display = "\n".join(f"• {kw}" for kw in keywords_list)
+            else:
+                # Show first 10, then truncate with count
+                shown_keywords = "\n".join(f"• {kw}" for kw in keywords_list[:10])
+                remaining = len(keywords_list) - 10
+                keywords_display = f"{shown_keywords}\n... and {remaining} more keywords"
+
+            table_data.append([cluster_name, str(keyword_count), keywords_display])
+
+        # Create table
+        col_widths = [2.5*inch, 1*inch, 4*inch]
+        keywords_table = Table(table_data, colWidths=col_widths)
+
+        # Style the table
+        keywords_table.setStyle(TableStyle([
+            # Header styling
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2b6cb0')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('TOPPADDING', (0, 0), (-1, 0), 12),
+
+            # Data rows styling
+            ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f7fafc')),
+            ('TEXTCOLOR', (0, 1), (-1, -1), colors.HexColor('#2d3748')),
+            ('ALIGN', (0, 1), (-1, -1), 'LEFT'),
+            ('ALIGN', (1, 1), (1, -1), 'CENTER'),  # Center the count column
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
+            ('TOPPADDING', (0, 1), (-1, -1), 8),
+
+            # Grid lines
+            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#e2e8f0')),
+
+            # Alternate row colors
+            ('BACKGROUND', (0, 2), (-1, 2), colors.HexColor('#edf2f7')),
+            ('BACKGROUND', (0, 4), (-1, 4), colors.HexColor('#edf2f7')),
+            ('BACKGROUND', (0, 6), (-1, 6), colors.HexColor('#edf2f7')),
+        ]))
+
+        content.append(keywords_table)
 
         return content
 
@@ -314,7 +372,7 @@ class ReportGenerator:
         content.append(Spacer(1, 0.2*inch))
 
         for idx, cluster in enumerate(clusters, 1):
-            # Cluster header with better formatting
+            # Cluster header with better formatting - use LLM-generated cluster name
             cluster_title = f"2.{idx} Content Cluster: {cluster['cluster_name']}"
             content.append(Paragraph(cluster_title, self.styles['SubSection']))
             content.append(Spacer(1, 0.1*inch))

@@ -572,38 +572,87 @@ def register(app):
         """Export batch data to external service"""
         try:
             from app.services.data.database import DatabaseService
-            
+            from app.config import Config
+
             db = DatabaseService()
+            batch = db.get_batch_by_id(batch_id)
             clusters = db.get_clusters_by_batch(batch_id)
-            
+
+            if not batch or not clusters:
+                client.chat_postMessage(
+                    channel=channel_id,
+                    text="❌ Batch not found or no clusters available for export."
+                )
+                return
+
             if destination == 'notion':
-                # Mock Notion export (would need Notion API integration)
-                client.chat_postMessage(
-                    channel=channel_id,
-                    text="📝 *Notion Export Feature*\n\n"
-                         "Notion integration would create a new page with:\n"
-                         "• Batch summary and metadata\n"
-                         "• All keyword clusters as sections\n"
-                         "• Generated outlines and post ideas\n"
-                         "• Links to PDF reports\n\n"
-                         f"✅ Mock export completed for batch `{batch_id[:8]}`\n"
-                         f"📊 Exported {len(clusters) if clusters else 0} clusters to Notion"
-                )
-            
+                # Check if Notion integration is configured
+                if not Config.NOTION_API_KEY or not Config.NOTION_DATABASE_ID:
+                    client.chat_postMessage(
+                        channel=channel_id,
+                        text="📝 *Notion Export Feature*\n\n"
+                              "Notion integration is not configured. To enable:\n"
+                              "• Set NOTION_API_KEY and NOTION_DATABASE_ID in environment\n"
+                              "• Install notion-client package\n\n"
+                              f"📊 Would export {len(clusters)} clusters to Notion"
+                    )
+                    return
+
+                try:
+                    from app.services.integrations.notion_service import NotionService
+
+                    notion = NotionService()
+                    page_url = notion.export_batch(batch, clusters)
+
+                    client.chat_postMessage(
+                        channel=channel_id,
+                        text=f"✅ *Notion Export Complete!*\n\n"
+                              f"📊 Exported {len(clusters)} clusters\n"
+                              f"🔗 View in Notion: {page_url}"
+                    )
+                except ImportError:
+                    client.chat_postMessage(
+                        channel=channel_id,
+                        text="📝 *Notion Export Feature*\n\n"
+                              "Notion client not installed. Install with:\n"
+                              "`pip install notion-client`\n\n"
+                              f"📊 Would export {len(clusters)} clusters to Notion"
+                    )
+
             elif destination == 'sheets':
-                # Mock Google Sheets export
-                client.chat_postMessage(
-                    channel=channel_id,
-                    text="📊 *Google Sheets Export Feature*\n\n"
-                         "Google Sheets integration would create:\n"
-                         "• Summary sheet with batch info\n"
-                         "• Clusters sheet with all groupings\n"
-                         "• Outlines sheet with content structure\n"
-                         "• Ideas sheet with post suggestions\n\n"
-                         f"✅ Mock export completed for batch `{batch_id[:8]}`\n"
-                         f"📈 Created spreadsheet with {len(clusters) if clusters else 0} cluster worksheets"
-                )
-        
+                # Check if Google Sheets integration is configured
+                if not Config.GOOGLE_CREDENTIALS_FILE:
+                    client.chat_postMessage(
+                        channel=channel_id,
+                        text="📊 *Google Sheets Export Feature*\n\n"
+                              "Google Sheets integration is not configured. To enable:\n"
+                              "• Set GOOGLE_CREDENTIALS_FILE in environment\n"
+                              "• Install google-api-python-client and google-auth packages\n\n"
+                              f"📈 Would create spreadsheet with {len(clusters)} cluster worksheets"
+                    )
+                    return
+
+                try:
+                    from app.services.integrations.sheets_service import SheetsService
+
+                    sheets = SheetsService()
+                    sheet_url = sheets.export_batch(batch, clusters)
+
+                    client.chat_postMessage(
+                        channel=channel_id,
+                        text=f"✅ *Google Sheets Export Complete!*\n\n"
+                          f"📊 Exported {len(clusters)} clusters\n"
+                          f"🔗 View spreadsheet: {sheet_url}"
+                    )
+                except ImportError:
+                    client.chat_postMessage(
+                        channel=channel_id,
+                        text="📊 *Google Sheets Export Feature*\n\n"
+                              "Google API client not installed. Install with:\n"
+                              "`pip install google-api-python-client google-auth`\n\n"
+                              f"📈 Would create spreadsheet with {len(clusters)} cluster worksheets"
+                    )
+
         except Exception as e:
             client.chat_postMessage(
                 channel=channel_id,

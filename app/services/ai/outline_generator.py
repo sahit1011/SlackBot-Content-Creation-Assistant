@@ -155,13 +155,34 @@ Respond ONLY with valid JSON, no additional text."""
         import json
         outline_text = response.choices[0].message.content
 
+        # Log the raw response for debugging
+        self.logger.debug(f"Raw LLM response: {outline_text[:500]}...")
+
         # Extract JSON if wrapped in markdown
         if '```json' in outline_text:
             outline_text = outline_text.split('```json')[1].split('```')[0]
         elif '```' in outline_text:
             outline_text = outline_text.split('```')[1].split('```')[0]
 
-        outline = json.loads(outline_text.strip())
+        outline_text = outline_text.strip()
+
+        # Try to parse JSON with better error handling
+        try:
+            outline = json.loads(outline_text)
+        except json.JSONDecodeError as e:
+            self.logger.error(f"JSON parsing failed: {str(e)}")
+            self.logger.error(f"Failed JSON content: {outline_text[:1000]}")
+            # Try to extract JSON from the text if it contains extra content
+            import re
+            json_match = re.search(r'\{.*\}', outline_text, re.DOTALL)
+            if json_match:
+                try:
+                    outline = json.loads(json_match.group())
+                    self.logger.info("Successfully extracted JSON using regex")
+                except json.JSONDecodeError:
+                    raise Exception(f"JSON parsing failed even after regex extraction: {str(e)}")
+            else:
+                raise Exception(f"No valid JSON found in response: {str(e)}")
 
         return outline
 
