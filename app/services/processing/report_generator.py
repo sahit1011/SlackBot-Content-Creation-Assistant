@@ -17,14 +17,27 @@ class ReportGenerator:
         self._setup_custom_styles()
 
     def _setup_custom_styles(self):
-        """Create custom paragraph styles"""
+        """Create custom paragraph styles with professional fonts"""
         # Title style
         self.styles.add(ParagraphStyle(
             name='CustomTitle',
             parent=self.styles['Heading1'],
-            fontSize=24,
-            textColor=colors.HexColor('#1a1a1a'),
-            spaceAfter=30,
+            fontName='Helvetica-Bold',
+            fontSize=28,
+            textColor=colors.HexColor('#1a365d'),
+            spaceAfter=40,
+            alignment=TA_CENTER,
+            leading=32
+        ))
+
+        # Subtitle style
+        self.styles.add(ParagraphStyle(
+            name='Subtitle',
+            parent=self.styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=14,
+            textColor=colors.HexColor('#4a5568'),
+            spaceAfter=25,
             alignment=TA_CENTER
         ))
 
@@ -32,20 +45,59 @@ class ReportGenerator:
         self.styles.add(ParagraphStyle(
             name='SectionHeader',
             parent=self.styles['Heading2'],
-            fontSize=16,
-            textColor=colors.HexColor('#2c5aa0'),
-            spaceBefore=20,
-            spaceAfter=12
+            fontName='Helvetica-Bold',
+            fontSize=18,
+            textColor=colors.HexColor('#2b6cb0'),
+            spaceBefore=25,
+            spaceAfter=15,
+            leading=22,
+            borderColor=colors.HexColor('#e2e8f0'),
+            borderWidth=0,
+            borderPadding=0
         ))
 
         # Subsection style
         self.styles.add(ParagraphStyle(
             name='SubSection',
             parent=self.styles['Heading3'],
-            fontSize=13,
-            textColor=colors.HexColor('#444444'),
-            spaceBefore=12,
-            spaceAfter=8
+            fontName='Helvetica-Bold',
+            fontSize=14,
+            textColor=colors.HexColor('#2d3748'),
+            spaceBefore=15,
+            spaceAfter=10,
+            leading=18
+        ))
+
+        # Custom body text style
+        self.styles.add(ParagraphStyle(
+            name='CustomBodyText',
+            parent=self.styles['Normal'],
+            fontName='Helvetica',
+            fontSize=11,
+            textColor=colors.HexColor('#2d3748'),
+            spaceAfter=8,
+            leading=14
+        ))
+
+        # Highlight style
+        self.styles.add(ParagraphStyle(
+            name='Highlight',
+            parent=self.styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=11,
+            textColor=colors.HexColor('#c53030'),
+            spaceAfter=8,
+            leading=14
+        ))
+
+        # Footer style
+        self.styles.add(ParagraphStyle(
+            name='Footer',
+            parent=self.styles['Normal'],
+            fontName='Helvetica-Oblique',
+            fontSize=9,
+            textColor=colors.HexColor('#718096'),
+            alignment=TA_CENTER
         ))
 
     def generate_report(
@@ -64,21 +116,28 @@ class ReportGenerator:
         os.makedirs(reports_dir, exist_ok=True)
         filepath = os.path.join(reports_dir, filename)
 
-        # Create PDF document
+        # Create PDF document with professional settings
         doc = SimpleDocTemplate(
             filepath,
             pagesize=letter,
             rightMargin=72,
             leftMargin=72,
             topMargin=72,
-            bottomMargin=18
+            bottomMargin=36,  # Increased bottom margin for footer
+            title="Content Strategy Report",
+            author="AI Content Strategy Assistant",
+            subject="Content Analysis and Strategy Recommendations"
         )
 
-        # Build content
+        # Build content with table of contents
         story = []
 
         # Cover page
         story.extend(self._create_cover_page(batch_data))
+        story.append(PageBreak())
+
+        # Table of contents
+        story.extend(self._create_table_of_contents(clusters))
         story.append(PageBreak())
 
         # Executive summary
@@ -98,34 +157,75 @@ class ReportGenerator:
         return filepath
 
     def _create_cover_page(self, batch_data: Dict) -> List:
-        """Create cover page"""
+        """Create professional cover page"""
         content = []
 
         # Add spacing from top
-        content.append(Spacer(1, 2*inch))
+        content.append(Spacer(1, 1.5*inch))
 
-        # Title
+        # Main title
         title = Paragraph("Content Strategy Report", self.styles['CustomTitle'])
         content.append(title)
-        content.append(Spacer(1, 0.3*inch))
+        content.append(Spacer(1, 0.2*inch))
 
-        # Batch info
+        # Subtitle
+        subtitle = Paragraph("AI-Powered Content Analysis & Strategy", self.styles['Subtitle'])
+        content.append(subtitle)
+        content.append(Spacer(1, 0.8*inch))
+
+        # Decorative line
+        from reportlab.lib.colors import Color
+        content.append(Spacer(1, 0.1*inch))
+
+        # Batch info box
         batch_info = f"""
         <para align=center>
-        <b>Batch ID:</b> {batch_data.get('id', 'N/A')[:8]}...<br/>
-        <b>Generated:</b> {datetime.now().strftime('%B %d, %Y')}<br/>
-        <b>Keywords Processed:</b> {batch_data.get('keyword_count', 0)}
+        <b>Report ID:</b> {batch_data.get('id', 'N/A')[:12]}<br/>
+        <b>Generated:</b> {datetime.now().strftime('%B %d, %Y at %I:%M %p')}<br/>
+        <b>Keywords Analyzed:</b> {batch_data.get('keyword_count', 0)}<br/>
+        <b>Content Clusters:</b> {len(batch_data.get('clusters', []))}
         </para>
         """
-        content.append(Paragraph(batch_info, self.styles['Normal']))
-        content.append(Spacer(1, 1*inch))
+        content.append(Paragraph(batch_info, self.styles['CustomBodyText']))
+        content.append(Spacer(1, 1.2*inch))
 
-        # Footer
+        # Professional footer
         footer = Paragraph(
-            "<para align=center><i>AI-Powered Content Strategy Assistant</i></para>",
-            self.styles['Normal']
+            "Generated by AI Content Strategy Assistant | Confidential",
+            self.styles['Footer']
         )
         content.append(footer)
+
+        return content
+
+    def _create_table_of_contents(self, clusters: List[Dict]) -> List:
+        """Create table of contents"""
+        content = []
+
+        content.append(Paragraph("Table of Contents", self.styles['SectionHeader']))
+        content.append(Spacer(1, 0.3*inch))
+
+        toc_data = [
+            ["1. Executive Summary", "3"],
+            ["2. Content Clusters & Strategy", "4"]
+        ]
+
+        # Add cluster entries
+        for idx, cluster in enumerate(clusters, 1):
+            cluster_name = cluster['cluster_name'][:30] + "..." if len(cluster['cluster_name']) > 30 else cluster['cluster_name']
+            toc_data.append([f"   2.{idx} {cluster_name}", str(4 + idx)])
+
+        toc_table = Table(toc_data, colWidths=[4*inch, 0.5*inch])
+        toc_table.setStyle(TableStyle([
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#2d3748')),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 11),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP')
+        ]))
+
+        content.append(toc_table)
+        content.append(Spacer(1, 0.2*inch))
 
         return content
 
@@ -161,14 +261,20 @@ class ReportGenerator:
 
         stats_table = Table(stats_data, colWidths=[3*inch, 2*inch])
         stats_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c5aa0')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2b6cb0')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, 0), 12),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ('TOPPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f7fafc')),
+            ('TEXTCOLOR', (0, 1), (-1, -1), colors.HexColor('#2d3748')),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 11),
+            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#e2e8f0')),
+            ('ALIGN', (1, 0), (1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')
         ]))
 
         content.append(stats_table)
@@ -201,89 +307,140 @@ class ReportGenerator:
         return content
 
     def _create_clusters_section(self, clusters: List[Dict]) -> List:
-        """Create clusters section with details"""
+        """Create professional clusters section with enhanced details"""
         content = []
 
         content.append(Paragraph("2. Content Clusters & Strategy", self.styles['SectionHeader']))
         content.append(Spacer(1, 0.2*inch))
 
         for idx, cluster in enumerate(clusters, 1):
-            # Cluster header
-            cluster_title = f"2.{idx} Cluster: {cluster['cluster_name']}"
+            # Cluster header with better formatting
+            cluster_title = f"2.{idx} Content Cluster: {cluster['cluster_name']}"
             content.append(Paragraph(cluster_title, self.styles['SubSection']))
             content.append(Spacer(1, 0.1*inch))
 
-            # Keywords in this cluster
+            # Keywords in this cluster with professional styling
             content.append(Paragraph(
                 f"<b>Keywords ({cluster['keyword_count']}):</b>",
-                self.styles['Normal']
+                self.styles['Highlight']
             ))
             keywords_text = ", ".join(cluster['keywords'])
-            content.append(Paragraph(keywords_text, self.styles['Normal']))
+            content.append(Paragraph(keywords_text, self.styles['CustomBodyText']))
             content.append(Spacer(1, 0.15*inch))
 
-            # Post idea
+            # Enhanced Post idea section
             post_idea = cluster.get('post_idea', {})
             if post_idea:
-                content.append(Paragraph("<b>Post Idea:</b>", self.styles['Normal']))
+                content.append(Paragraph("📝 <b>Strategic Post Idea</b>", self.styles['Highlight']))
 
                 idea_text = f"""
                 <b>Title:</b> {post_idea.get('title', 'N/A')}<br/>
-                <b>Angle:</b> {post_idea.get('angle', 'N/A')}<br/>
+                <b>Unique Angle:</b> {post_idea.get('angle', 'N/A')}<br/>
                 <b>Target Audience:</b> {post_idea.get('target_audience', 'N/A')}<br/>
-                <b>Value Proposition:</b> {post_idea.get('value_proposition', 'N/A')}
+                <b>Value Proposition:</b> {post_idea.get('value_proposition', 'N/A')}<br/>
+                <b>Content Format:</b> {post_idea.get('content_format', 'N/A')}<br/>
+                <b>Reading Time:</b> {post_idea.get('estimated_reading_time', 'N/A')} | <b>Level:</b> {post_idea.get('difficulty_level', 'N/A')}
                 """
-                content.append(Paragraph(idea_text, self.styles['Normal']))
+                content.append(Paragraph(idea_text, self.styles['CustomBodyText']))
                 content.append(Spacer(1, 0.15*inch))
 
-            # Outline
+                # Social hooks if available
+                social_hooks = post_idea.get('social_hooks', [])
+                if social_hooks:
+                    content.append(Paragraph("<b>Social Media Hooks:</b>", self.styles['Highlight']))
+                    hooks_text = " • " + "\n • ".join(social_hooks[:3])
+                    content.append(Paragraph(hooks_text, self.styles['CustomBodyText']))
+                    content.append(Spacer(1, 0.1*inch))
+
+            # Enhanced Outline section
             outline = cluster.get('outline', {})
             if outline:
-                content.append(Paragraph("<b>Content Outline:</b>", self.styles['Normal']))
+                content.append(Paragraph("📋 <b>Detailed Content Outline</b>", self.styles['Highlight']))
 
                 # Outline title
                 outline_title = outline.get('title', 'Content Outline')
-                content.append(Paragraph(f"<i>{outline_title}</i>", self.styles['Normal']))
+                content.append(Paragraph(f"<i>{outline_title}</i>", self.styles['CustomBodyText']))
                 content.append(Spacer(1, 0.1*inch))
 
-                # Introduction
+                # Enhanced Introduction
                 intro = outline.get('introduction', {})
                 if intro:
-                    content.append(Paragraph("<b>Introduction</b>", self.styles['Normal']))
+                    content.append(Paragraph("🎯 <b>Introduction Strategy</b>", self.styles['SubSection']))
                     if isinstance(intro, dict):
-                        intro_text = intro.get('hook', '') or intro.get('overview', '')
-                    else:
-                        intro_text = str(intro)
-                    content.append(Paragraph(intro_text, self.styles['Normal']))
+                        hooks = intro.get('hooks', [])
+                        if hooks:
+                            content.append(Paragraph("<b>Opening Hooks:</b>", self.styles['BodyText']))
+                            for hook in hooks[:3]:
+                                content.append(Paragraph(f"  • {hook}", self.styles['CustomBodyText']))
+                        overview = intro.get('overview', '')
+                        if overview:
+                            content.append(Paragraph(f"<b>Overview:</b> {overview}", self.styles['CustomBodyText']))
+                        target_audience = intro.get('target_audience', '')
+                        if target_audience:
+                            content.append(Paragraph(f"<b>Target Audience:</b> {target_audience}", self.styles['CustomBodyText']))
                     content.append(Spacer(1, 0.1*inch))
 
-                # Sections
+                # Enhanced Sections
                 sections = outline.get('sections', [])
-                for sec_idx, section in enumerate(sections[:7], 1):  # Limit to 7 sections
+                for sec_idx, section in enumerate(sections[:8], 1):  # Increased limit
                     heading = section.get('heading', f'Section {sec_idx}')
-                    content.append(Paragraph(f"<b>{sec_idx}. {heading}</b>", self.styles['Normal']))
+                    word_count = section.get('word_count_estimate', 0)
+                    content.append(Paragraph(f"<b>{sec_idx}. {heading}</b> ({word_count} words)", self.styles['SubSection']))
 
-                    # Subsections
-                    subsections = section.get('subsections', [])
-                    if subsections:
-                        for subsec in subsections[:3]:  # Limit to 3 subsections
-                            content.append(Paragraph(f"  • {subsec}", self.styles['Normal']))
+                    # SEO keywords
+                    seo_keywords = section.get('seo_keywords', [])
+                    if seo_keywords:
+                        content.append(Paragraph(f"<i>SEO Keywords: {', '.join(seo_keywords)}</i>", self.styles['CustomBodyText']))
 
+                    # Description
                     description = section.get('description', '')
                     if description:
-                        content.append(Paragraph(f"  <i>{description}</i>", self.styles['Normal']))
+                        content.append(Paragraph(description, self.styles['CustomBodyText']))
 
-                    content.append(Spacer(1, 0.05*inch))
+                    # Enhanced Subsections
+                    subsections = section.get('subsections', [])
+                    if subsections:
+                        content.append(Spacer(1, 0.05*inch))
+                        for subsec in subsections[:4]:  # Increased limit
+                            if isinstance(subsec, dict):
+                                sub_heading = subsec.get('heading', '')
+                                content_ideas = subsec.get('content_ideas', [])
+                                content.append(Paragraph(f"  ▶ <b>{sub_heading}</b>", self.styles['CustomBodyText']))
+                                for idea in content_ideas[:2]:
+                                    content.append(Paragraph(f"    • {idea}", self.styles['CustomBodyText']))
+                            else:
+                                content.append(Paragraph(f"  ▶ {subsec}", self.styles['CustomBodyText']))
 
-                # Conclusion
+                    content.append(Spacer(1, 0.08*inch))
+
+                # Enhanced Conclusion
                 conclusion = outline.get('conclusion', {})
                 if conclusion:
-                    content.append(Paragraph("<b>Conclusion</b>", self.styles['Normal']))
+                    content.append(Paragraph("🎯 <b>Conclusion & Call-to-Action</b>", self.styles['SubSection']))
                     if isinstance(conclusion, dict):
-                        concl_text = conclusion.get('summary', '') or conclusion.get('cta', '')
-                    else:
-                        concl_text = str(conclusion)
-                    content.append(Paragraph(concl_text, self.styles['Normal']))
+                        summary = conclusion.get('summary', '')
+                        if summary:
+                            content.append(Paragraph(f"<b>Key Takeaways:</b> {summary}", self.styles['CustomBodyText']))
+                        actionable_insights = conclusion.get('actionable_insights', [])
+                        if actionable_insights:
+                            content.append(Paragraph("<b>Actionable Insights:</b>", self.styles['CustomBodyText']))
+                            for insight in actionable_insights[:3]:
+                                content.append(Paragraph(f"  • {insight}", self.styles['CustomBodyText']))
+                        cta = conclusion.get('cta', '')
+                        if cta:
+                            content.append(Paragraph(f"<b>Call-to-Action:</b> {cta}", self.styles['CustomBodyText']))
+                    content.append(Spacer(1, 0.1*inch))
+
+                # SEO Notes
+                seo_notes = outline.get('seo_notes', {})
+                if seo_notes:
+                    content.append(Paragraph("🔍 <b>SEO Optimization Notes</b>", self.styles['Highlight']))
+                    primary_kw = seo_notes.get('primary_keyword', '')
+                    if primary_kw:
+                        content.append(Paragraph(f"<b>Primary Keyword:</b> {primary_kw}", self.styles['CustomBodyText']))
+                    meta_desc = seo_notes.get('meta_description', '')
+                    if meta_desc:
+                        content.append(Paragraph(f"<b>Meta Description:</b> {meta_desc}", self.styles['CustomBodyText']))
 
             content.append(Spacer(1, 0.3*inch))
 

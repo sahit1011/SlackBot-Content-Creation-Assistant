@@ -82,34 +82,54 @@ class OutlineGenerator:
     ) -> Dict:
         """Generate outline using Groq LLM"""
 
-        prompt = f"""Create a comprehensive content outline for a blog post.
+        prompt = f"""Create a comprehensive, detailed content outline for a high-quality blog post.
 
 Target Keywords: {', '.join(keywords[:5])}
 Common Topics in Top-Ranking Content: {', '.join(topics[:10])}
 
 Generate a structured outline with:
-1. An engaging introduction section
-2. 5-7 main body sections (H2 level)
-3. 2-3 subsections under each main section (H3 level)
-4. A conclusion section
+1. An engaging introduction section with multiple hooks
+2. 6-8 main body sections (H2 level) with detailed descriptions
+3. 3-4 subsections under each main section (H3 level) with specific content ideas
+4. A strong conclusion section with actionable takeaways
+5. Include estimated word count for each section
+6. Add SEO optimization notes
 
 Format as JSON:
 {{
-  "title": "Suggested title",
+  "title": "Suggested compelling title",
   "introduction": {{
-    "hook": "Opening hook",
-    "overview": "What this post covers"
+    "hooks": ["Hook 1", "Hook 2", "Hook 3"],
+    "overview": "What this post covers",
+    "target_audience": "Who this is for"
   }},
   "sections": [
     {{
       "heading": "Main section heading",
-      "description": "What this section covers",
-      "subsections": ["Subsection 1", "Subsection 2"]
+      "description": "Detailed explanation of what this section covers",
+      "word_count_estimate": 300,
+      "seo_keywords": ["keyword1", "keyword2"],
+      "subsections": [
+        {{
+          "heading": "Subsection 1",
+          "content_ideas": ["Idea 1", "Idea 2"]
+        }},
+        {{
+          "heading": "Subsection 2",
+          "content_ideas": ["Idea 1", "Idea 2"]
+        }}
+      ]
     }}
   ],
   "conclusion": {{
     "summary": "Key takeaways",
+    "actionable_insights": ["Insight 1", "Insight 2"],
     "cta": "Call to action"
+  }},
+  "seo_notes": {{
+    "primary_keyword": "main keyword",
+    "secondary_keywords": ["keyword1", "keyword2"],
+    "meta_description": "Suggested meta description"
   }}
 }}
 
@@ -119,7 +139,7 @@ Respond ONLY with valid JSON, no additional text."""
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a content strategy expert. Generate well-structured content outlines in JSON format."
+                    "content": "You are a senior content strategist and SEO expert. Generate detailed, actionable content outlines that drive engagement and conversions. Focus on comprehensive structure, SEO optimization, and practical value."
                 },
                 {
                     "role": "user",
@@ -128,7 +148,7 @@ Respond ONLY with valid JSON, no additional text."""
             ],
             model="llama-3.1-8b-instant",
             temperature=0.7,
-            max_tokens=2000
+            max_tokens=3000
         )
 
         # Parse JSON response

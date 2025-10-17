@@ -55,22 +55,36 @@ class IdeaGenerator:
             sections = [s.get('heading', '') for s in outline.get('sections', [])]
             outline_context = f"\n\nOutline sections: {', '.join(sections)}"
 
-        prompt = f"""Generate ONE unique and compelling blog post idea.
+        prompt = f"""Generate ONE unique, compelling, and user-friendly blog post idea that drives engagement and conversions.
 
 Keywords: {', '.join(keywords[:5])}{outline_context}
 
 Requirements:
-- Create a catchy, click-worthy title
+- Create a catchy, click-worthy title that sparks curiosity
 - Propose a unique angle that stands out from typical content
-- Define the target audience clearly
-- Make it actionable and valuable
+- Define the target audience clearly with demographics and pain points
+- Make it actionable and valuable with specific benefits
+- Include content format suggestions (listicle, how-to, case study, etc.)
+- Add estimated reading time and difficulty level
+- Suggest social media hooks and sharing angles
+- Include monetization potential (affiliate, lead gen, etc.)
 
 Format as JSON:
 {{
   "title": "Catchy post title",
   "angle": "Unique perspective or approach",
-  "target_audience": "Who this is for",
-  "value_proposition": "What readers will gain"
+  "target_audience": "Who this is for (demographics, pain points, interests)",
+  "value_proposition": "What readers will gain (specific benefits)",
+  "content_format": "Suggested format (how-to guide, listicle, case study, etc.)",
+  "estimated_reading_time": "5-7 minutes",
+  "difficulty_level": "Beginner/Intermediate/Advanced",
+  "social_hooks": ["Hook 1", "Hook 2", "Hook 3"],
+  "monetization_potential": "Affiliate products, lead generation, etc.",
+  "seo_optimization": {{
+    "primary_keyword": "main keyword",
+    "search_intent": "informational/commercial/transactional",
+    "competitor_analysis": "What makes this different"
+  }}
 }}
 
 Respond ONLY with valid JSON."""
@@ -83,7 +97,7 @@ Respond ONLY with valid JSON."""
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a creative content strategist. Generate unique, engaging post ideas."
+                        "content": "You are a senior content marketing strategist with expertise in viral content creation, SEO, and audience psychology. Generate highly engaging, conversion-focused post ideas that combine creativity with strategic marketing principles."
                     },
                     {
                         "role": "user",
@@ -92,7 +106,7 @@ Respond ONLY with valid JSON."""
                 ],
                 model="llama-3.1-8b-instant",
                 temperature=0.8,
-                max_tokens=500
+                max_tokens=1000
             )
 
             self.logger.info("Received response from Groq API")

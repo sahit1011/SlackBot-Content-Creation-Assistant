@@ -42,13 +42,18 @@ def test_pipeline():
     # Create mock client
     mock_client = MockSlackClient()
 
-    # Test keywords
+    # Test keywords - comprehensive set for content creation
     test_keywords = [
-        "running shoes",
-        "yoga mats",
-        "protein powder",
-        "fitness trackers",
-        "workout clothes"
+        "best running shoes 2024",
+        "yoga mats for beginners",
+        "protein powder reviews",
+        "fitness trackers comparison",
+        "workout clothes women",
+        "home gym equipment",
+        "meal prep ideas",
+        "weight loss tips",
+        "muscle building supplements",
+        "cardio workout plans"
     ]
 
     # Initialize pipeline with a valid UUID for user_id
