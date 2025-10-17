@@ -162,8 +162,27 @@ class DatabaseService:
             .execute()
 
     def get_batch_by_id(self, batch_id: str) -> Optional[Dict]:
-        """Get batch by ID (alias for get_batch)"""
-        return self.get_batch(batch_id)
+        """Get batch by ID with fuzzy matching for partial IDs"""
+        try:
+            # Try exact match first
+            batch = self.get_batch(batch_id)
+            if batch:
+                return batch
+
+            # Try partial match (first 8 chars) - get all batches and filter
+            all_batches = self.client.table('keyword_batches')\
+                .select('*')\
+                .execute()
+
+            if all_batches.data:
+                for batch in all_batches.data:
+                    if str(batch['id']).startswith(batch_id):
+                        return batch
+
+            return None
+        except Exception as e:
+            print(f"Error fetching batch: {str(e)}")
+            return None
 
     def get_clusters_by_batch(self, batch_id: str) -> List[Dict]:
         """Get all clusters for a batch (alias for get_batch_clusters)"""
