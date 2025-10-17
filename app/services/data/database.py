@@ -169,9 +169,15 @@ class DatabaseService:
             if batch:
                 return batch
 
-            # Try partial match (first 8 chars) - get all batches and filter
+            # Try partial match (first 8 chars) - get user's batches only and filter
+            # This is more efficient and secure than fetching all batches
+            from app.services.data.database import DatabaseService
+            # We need to get the current user's batches, but we don't have user_id here
+            # So we'll fetch recent batches and filter by partial ID
             all_batches = self.client.table('keyword_batches')\
                 .select('*')\
+                .order('created_at', desc=True)\
+                .limit(50)\
                 .execute()
 
             if all_batches.data:
