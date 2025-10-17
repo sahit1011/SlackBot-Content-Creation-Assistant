@@ -20,6 +20,20 @@ def health_check():
     """Health check endpoint"""
     return jsonify(health_status), 200
 
+@app.route('/', methods=['GET'])
+def root():
+    """Root endpoint with service information"""
+    return jsonify({
+        'message': 'SlackBot Content Creation Assistant - Backend API',
+        'description': 'This is a backend service for processing keywords and content via Slack integration.',
+        'endpoints': {
+            '/health': 'Health check endpoint',
+            '/ready': 'Readiness check endpoint'
+        },
+        'status': health_status['status'],
+        'services': health_status['services']
+    }), 200
+
 @app.route('/ready', methods=['GET'])
 def readiness_check():
     """Readiness check endpoint"""
